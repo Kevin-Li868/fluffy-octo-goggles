@@ -1,0 +1,13 @@
+services:
+  yangsheng:
+    build: .
+    container_name: yangsheng-app
+    ports:
+      - "8000:8000"
+    volumes:
+      # SQLite 数据库文件持久化,删容器不丢数据
+      - ./data:/app/data
+    environment:
+      # ⚠️ 上线前务必修改店员密码
+      - STAFF_PASSWORD=888888
+    restart: unless-stopped

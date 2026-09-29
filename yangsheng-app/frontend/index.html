@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>养生馆预约</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --main:#1f7a6d; --main-dark:#166355; --bg:#f4f6f5; --card:#ffffff;
+    --text:#222; --muted:#8a8f8d; --line:#e8eceb; --danger:#d9534f; --warn:#e6a23c;
+  }
+  body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+         background:var(--bg); color:var(--text); font-size:15px; line-height:1.5; }
+  .wrap { max-width:560px; margin:0 auto; min-height:100vh; background:var(--bg); padding-bottom:80px; }
+  header.top { background:linear-gradient(135deg,var(--main),var(--main-dark)); color:#fff; padding:20px 16px 14px; }
+  header.top h1 { font-size:20px; font-weight:600; }
+  header.top p { font-size:12px; opacity:.85; margin-top:4px; }
+  .roletabs { display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
+  .roletabs button { flex:1; border:0; background:#fff; padding:13px 0; font-size:15px; color:var(--muted); }
+  .roletabs button.on { color:var(--main); font-weight:600; border-bottom:3px solid var(--main); }
+  .page { padding:12px 12px 0; display:none; }
+  .page.on { display:block; }
+  .card { background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+  .cat-title { font-size:13px; color:var(--muted); margin:6px 2px 8px; }
+  .svc { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); }
+  .svc:last-child { border-bottom:0; }
+  .svc .info { flex:1; }
+  .svc .name { font-size:16px; font-weight:500; }
+  .svc .desc { font-size:12px; color:var(--muted); margin-top:2px; }
+  .svc .price { color:#e07b39; font-size:17px; font-weight:600; margin-right:10px; }
+  .svc .price small { font-size:12px; font-weight:400; }
+  .btn { border:0; border-radius:8px; padding:10px 18px; font-size:15px; background:var(--main); color:#fff; }
+  .btn:active { opacity:.85; }
+  .btn.small { padding:7px 14px; font-size:13px; }
+  .btn.ghost { background:#fff; color:var(--main); border:1px solid var(--main); }
+  .btn.danger { background:#fff; color:var(--danger); border:1px solid var(--danger); }
+  .btn.warn { background:var(--warn); }
+  .btn.block { width:100%; padding:13px; font-size:16px; }
+  .btn:disabled { background:#b9c4c1; }
+  input,select,textarea { width:100%; border:1px solid var(--line); border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; }
+  input:focus,select:focus,textarea:focus { outline:none; border-color:var(--main); }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .chips { display:flex; overflow-x:auto; gap:8px; padding:4px 0 8px; }
+  .chip { flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:10px; padding:9px 12px; font-size:13px; }
+  .chip.on { background:var(--main); color:#fff; border-color:var(--main); }
+  .slots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .slot { border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px 0; text-align:center; font-size:14px; }
+  .slot.on { background:var(--main); color:#fff; border-color:var(--main); }
+  /* 弹窗 */
+  .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; display:none; align-items:flex-end; justify-content:center; }
+  .modal-mask.show { display:flex; }
+  .modal { background:#fff; width:100%; max-width:560px; max-height:88vh; overflow-y:auto; border-radius:16px 16px 0 0; padding:18px 16px 26px; }
+  .modal h3 { font-size:17px; margin-bottom:12px; }
+  .modal .close { float:right; border:0; background:none; font-size:20px; color:var(--muted); }
+  /* 预约/订单条目 */
+  .item { border-bottom:1px solid var(--line); padding:12px 0; }
+  .item:last-child { border-bottom:0; }
+  .item .row1 { display:flex; justify-content:space-between; align-items:center; }
+  .item .t { font-size:15px; font-weight:500; }
+  .item .sub { font-size:13px; color:var(--muted); margin-top:4px; }
+  .tag { font-size:12px; padding:3px 9px; border-radius:20px; background:#eef4f3; color:var(--main); }
+  .tag.pending { background:#fef6e7; color:#c07f1a; }
+  .tag.arrived { background:#e8f3ff; color:#2f7fd0; }
+  .tag.done { background:#eef4f3; color:var(--main); }
+  .tag.cancelled { background:#f2f2f2; color:#999; }
+  .actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  /* 店员tab */
+  .stafftabs { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; }
+  .stafftabs button { flex:1; white-space:nowrap; border:1px solid var(--line); background:#fff; border-radius:20px; padding:8px 12px; font-size:14px; color:var(--muted); }
+  .stafftabs button.on { background:var(--main); color:#fff; border-color:var(--main); }
+  .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .stat { background:#fff; border-radius:12px; padding:14px 8px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+  .stat .v { font-size:20px; font-weight:700; color:var(--main); }
+  .stat .k { font-size:12px; color:var(--muted); margin-top:4px; }
+  .rank { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .rank:last-child { border-bottom:0; }
+  .qty { display:flex; align-items:center; gap:10px; }
+  .qty button { width:30px; height:30px; border-radius:50%; border:1px solid var(--line); background:#fff; font-size:16px; }
+  .payrow { display:flex; gap:8px; }
+  .payrow .chip { flex:1; text-align:center; }
+  .totalbar { position:sticky; bottom:0; background:#fff; border-top:1px solid var(--line); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+  .totalbar .amt { font-size:20px; font-weight:700; color:#e07b39; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:rgba(0,0,0,.78); color:#fff;
+           padding:10px 18px; border-radius:20px; font-size:14px; z-index:200; display:none; max-width:90%; text-align:center; }
+  .empty { text-align:center; color:var(--muted); padding:34px 0; font-size:14px; }
+  .loginbox { margin:40px 12px 0; }
+  .foot { text-align:center; color:var(--muted); font-size:12px; padding:18px 0 8px; }
+  .sec-title { font-size:16px; font-weight:600; margin:4px 2px 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>颐养馆</h1>
+    <p>养生调理 · 在线预约</p>
+  </header>
+  <nav class="roletabs">
+    <button id="tabCustomer" class="on" onclick="switchRole('customer')">顾客预约</button>
+    <button id="tabStaff" onclick="switchRole('staff')">店员管理</button>
+  </nav>
+
+  <!-- ============ 顾客端 ============ -->
+  <div id="pageCustomer" class="page on">
+    <div id="svcList"></div>
+    <div class="card">
+      <div class="sec-title">我的预约</div>
+      <div class="field"><label>手机号</label><input id="qPhone" type="tel" maxlength="11" placeholder="输入预约时填写的手机号"></div>
+      <button class="btn block" onclick="queryMyBookings()">查询预约</button>
+      <div id="myBookings" style="margin-top:8px;"></div>
+    </div>
+    <div class="foot">营业时间 10:00 – 21:00 · 到店请出示预约单号</div>
+  </div>
+
+  <!-- ============ 店员端 ============ -->
+  <div id="pageStaff" class="page">
+    <div id="staffLogin" class="loginbox card">
+      <div class="sec-title">店员登录</div>
+      <div class="field"><label>管理密码</label><input id="staffPwd" type="password" placeholder="请输入店员密码"></div>
+      <button class="btn block" onclick="staffLogin()">登录</button>
+    </div>
+    <div id="staffMain" style="display:none;">
+      <div class="stafftabs" style="padding:0 12px;">
+        <button class="on" onclick="staffTab('bookings',this)">预约管理</button>
+        <button onclick="staffTab('order',this)">快速开单</button>
+        <button onclick="staffTab('stats',this)">营收统计</button>
+        <button onclick="staffTab('services',this)">项目管理</button>
+      </div>
+      <div id="stBookings" class="page on" style="padding-top:0;">
+        <div class="card">
+          <div class="field"><label>选择日期</label><input id="bkDate" type="date"></div>
+          <button class="btn small" onclick="loadStaffBookings()">查看</button>
+        </div>
+        <div id="staffBookingList"></div>
+      </div>
+      <div id="stOrder" class="page" style="padding-top:0;">
+        <div class="card"><div class="sec-title">选择项目</div><div id="orderSvcList"></div></div>
+        <div class="card">
+          <div class="sec-title">支付方式</div>
+          <div class="payrow" id="payRow">
+            <div class="chip on" data-pay="现金">现金</div>
+            <div class="chip" data-pay="微信">微信</div>
+            <div class="chip" data-pay="支付宝">支付宝</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="field"><label>顾客姓名(选填)</label><input id="odName" placeholder="散客可不填"></div>
+          <div class="field"><label>顾客电话(选填)</label><input id="odPhone" type="tel" maxlength="11" placeholder="选填"></div>
+          <div class="field"><label>备注(选填)</label><input id="odRemark" placeholder="选填"></div>
+        </div>
+        <div class="totalbar"><div>合计 <span class="amt" id="orderTotal">¥0</span></div>
+          <button class="btn" onclick="submitOrder()">确认收款</button></div>
+        <div class="card" style="margin-top:12px;"><div class="sec-title">今日订单</div><div id="todayOrders"></div></div>
+      </div>
+      <div id="stStats" class="page" style="padding-top:0;">
+        <div class="stat-grid" style="margin-bottom:12px;">
+          <div class="stat"><div class="v" id="stTodayRev">¥0</div><div class="k">今日营收</div></div>
+          <div class="stat"><div class="v" id="stWeekRev">¥0</div><div class="k">本周营收</div></div>
+          <div class="stat"><div class="v" id="stMonthRev">¥0</div><div class="k">本月营收</div></div>
+        </div>
+        <div class="stat-grid" style="margin-bottom:12px;">
+          <div class="stat"><div class="v" id="stTodayN">0</div><div class="k">今日订单</div></div>
+          <div class="stat"><div class="v" id="stWeekN">0</div><div class="k">本周订单</div></div>
+          <div class="stat"><div class="v" id="stMonthN">0</div><div class="k">本月订单</div></div>
+        </div>
+        <div class="card"><div class="sec-title">本月项目销量排行</div><div id="rankList"></div></div>
+      </div>
+      <div id="stServices" class="page" style="padding-top:0;">
+        <div style="padding:0 0 10px;"><button class="btn small" onclick="openSvcEdit(null)">+ 新增项目</button></div>
+        <div id="staffSvcList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 预约弹窗 -->
+<div class="modal-mask" id="bookMask">
+  <div class="modal">
+    <button class="close" onclick="closeModal('bookMask')">×</button>
+    <h3 id="bookSvcName">预约</h3>
+    <div class="field"><label>选择日期</label><div class="chips" id="dateChips"></div></div>
+    <div class="field"><label>选择时间</label><div class="slots" id="slotGrid"></div></div>
+    <div class="field"><label>姓名</label><input id="bkName" placeholder="请填写姓名"></div>
+    <div class="field"><label>手机号</label><input id="bkPhone" type="tel" maxlength="11" placeholder="用于查询与到店核销"></div>
+    <button class="btn block" id="bookSubmit" onclick="submitBooking()">提交预约</button>
+  </div>
+</div>
+
+<!-- 项目编辑弹窗 -->
+<div class="modal-mask" id="svcMask">
+  <div class="modal">
+    <button class="close" onclick="closeModal('svcMask')">×</button>
+    <h3 id="svcEditTitle">新增项目</h3>
+    <input type="hidden" id="seId">
+    <div class="field"><label>项目名称</label><input id="seName"></div>
+    <div class="field"><label>价格(元)</label><input id="sePrice" type="number" min="1"></div>
+    <div class="field"><label>分类</label><input id="seCat" placeholder="如: 身体调理"></div>
+    <div class="field"><label>简介(选填)</label><input id="seDesc"></div>
+    <div class="field"><label>排序(数字越小越靠前)</label><input id="seSort" type="number" value="99"></div>
+    <div class="field"><label>状态</label>
+      <select id="seActive"><option value="1">上架</option><option value="0">下架</option></select></div>
+    <button class="btn block" onclick="saveService()">保存</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var API = '';
+var services = [];
+var metaDays = [], metaSlots = [];
+var curBook = { service:null, date:'', slot:'' };
+var token = localStorage.getItem('ys_token') || '';
+var orderSel = {};   // service_id -> qty
+var payMethod = '现金';
+var CAT_ORDER = ['面部护理','头部','身体调理','优惠套餐'];
+
+function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  clearTimeout(t._h); t._h=setTimeout(function(){t.style.display='none';},2200); }
+
+function api(path, opt){
+  opt = opt || {};
+  opt.headers = opt.headers || {};
+  if(token) opt.headers['X-Token'] = token;
+  if(opt.body) opt.headers['Content-Type'] = 'application/json';
+  return fetch(API + path, opt).then(function(r){
+    if(r.status === 401){ token=''; localStorage.removeItem('ys_token'); showStaffLogin(); toast('登录已过期,请重新登录'); throw new Error('unauth'); }
+    return r.json().then(function(j){
+      if(!r.ok) throw new Error(j.detail || '请求失败');
+      return j;
+    });
+  });
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function money(n){ return '¥' + (Math.round(n*100)/100); }
+
+/* ---------- 角色切换 ---------- */
+function switchRole(r){
+  document.getElementById('tabCustomer').className = r==='customer' ? 'on' : '';
+  document.getElementById('tabStaff').className = r==='staff' ? 'on' : '';
+  document.getElementById('pageCustomer').className = 'page' + (r==='customer' ? ' on' : '');
+  document.getElementById('pageStaff').className = 'page' + (r==='staff' ? ' on' : '');
+  if(r==='staff'){ token ? showStaffMain() : showStaffLogin(); }
+}
+function showStaffLogin(){ document.getElementById('staffLogin').style.display='block'; document.getElementById('staffMain').style.display='none'; }
+function showStaffMain(){ document.getElementById('staffLogin').style.display='none'; document.getElementById('staffMain').style.display='block';
+  loadStaffBookings(); loadOrderServices(); loadStats(); loadStaffServices(); loadTodayOrders(); }
+
+/* ---------- 顾客: 服务列表 ---------- */
+function loadServices(){
+  api('/api/services').then(function(j){
+    services = j.services;
+    var groups = {};
+    services.forEach(function(s){ (groups[s.category] = groups[s.category] || []).push(s); });
+    var cats = Object.keys(groups).sort(function(a,b){
+      var ia=CAT_ORDER.indexOf(a), ib=CAT_ORDER.indexOf(b);
+      return (ia<0?99:ia) - (ib<0?99:ib);
+    });
+    var html = '';
+    cats.forEach(function(c){
+      html += '<div class="cat-title">'+esc(c)+'</div><div class="card">';
+      groups[c].forEach(function(s){
+        html += '<div class="svc"><div class="info"><div class="name">'+esc(s.name)+'</div>'
+          + (s.description ? '<div class="desc">'+esc(s.description)+'</div>' : '')
+          + '</div><div class="price">'+money(s.price)+'<small>元</small></div>'
+          + '<button class="btn small" onclick="openBooking('+s.id+')">预约</button></div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById('svcList').innerHTML = html || '<div class="empty">暂无可预约项目</div>';
+  }).catch(function(e){ toast(e.message); });
+}
+function loadMeta(){
+  api('/api/meta').then(function(j){
+    metaDays = j.days; metaSlots = j.time_slots;
+  }).catch(function(){});
+}
+
+/* ---------- 顾客: 预约 ---------- */
+function openBooking(id){
+  var s = null;
+  services.forEach(function(x){ if(x.id===id) s=x; });
+  if(!s) return;
+  curBook = { service:s, date: metaDays.length?metaDays[0].date:'', slot:'' };
+  document.getElementById('bookSvcName').textContent = '预约 · ' + s.name + ' ' + money(s.price) + '元';
+  document.getElementById('bkName').value=''; document.getElementById('bkPhone').value='';
+  renderDateChips(); renderSlots();
+  document.getElementById('bookMask').classList.add('show');
+}
+function renderDateChips(){
+  document.getElementById('dateChips').innerHTML = metaDays.map(function(d){
+    return '<div class="chip'+(d.date===curBook.date?' on':'')+'" onclick="pickDate(\''+d.date+'\',this)">'+esc(d.label)+'</div>';
+  }).join('');
+}
+function pickDate(d, el){ curBook.date=d;
+  var cs = el.parentNode.children; for(var i=0;i<cs.length;i++) cs[i].className='chip';
+  el.className='chip on';
+}
+function renderSlots(){
+  document.getElementById('slotGrid').innerHTML = metaSlots.map(function(s){
+    return '<div class="slot'+(s===curBook.slot?' on':'')+'" onclick="pickSlot(\''+s+'\',this)">'+s+'</div>';
+  }).join('');
+}
+function pickSlot(s, el){ curBook.slot=s;
+  var cs = el.parentNode.children; for(var i=0;i<cs.length;i++) cs[i].className='slot';
+  el.className='slot on';
+}
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function submitBooking(){
+  var name = document.getElementById('bkName').value.trim();
+  var phone = document.getElementById('bkPhone').value.trim();
+  if(!curBook.date){ toast('请选择日期'); return; }
+  if(!curBook.slot){ toast('请选择时间'); return; }
+  if(!name){ toast('请填写姓名'); return; }
+  if(!/^1[3-9]\d{9}$/.test(phone)){ toast('手机号格式不正确'); return; }
+  var btn = document.getElementById('bookSubmit'); btn.disabled = true;
+  api('/api/bookings', { method:'POST', body: JSON.stringify({
+      name:name, phone:phone, service_id:curBook.service.id, date:curBook.date, time_slot:curBook.slot
+    }) }).then(function(j){
+    btn.disabled = false; closeModal('bookMask');
+    toast('预约成功!单号 '+j.booking_no+'，请按时到店');
+    document.getElementById('qPhone').value = phone;
+    queryMyBookings();
+  }).catch(function(e){ btn.disabled=false; toast(e.message); });
+}
+
+/* ---------- 顾客: 我的预约 ---------- */
+function queryMyBookings(){
+  var phone = document.getElementById('qPhone').value.trim();
+  if(!/^1[3-9]\d{9}$/.test(phone)){ toast('手机号格式不正确'); return; }
+  api('/api/bookings?phone='+phone).then(function(j){
+    var html = '';
+    if(!j.bookings.length) html = '<div class="empty">暂无预约记录</div>';
+    j.bookings.forEach(function(b){
+      html += '<div class="item"><div class="row1"><span class="t">'+esc(b.service_name)+' · '+esc(b.date)+' '+esc(b.time_slot)+'</span>'
+        + '<span class="tag '+b.status+'">'+esc(b.status_label)+'</span></div>'
+        + '<div class="sub">单号 '+esc(b.booking_no)+' · '+money(b.price)+'元 · '+esc(b.name)+'</div>';
+      if(b.status==='pending'){
+        html += '<div class="actions"><button class="btn small danger" onclick="cancelMyBooking('+b.id+',\''+phone+'\')">取消预约</button></div>';
+      }
+      html += '</div>';
+    });
+    document.getElementById('myBookings').innerHTML = html;
+  }).catch(function(e){ toast(e.message); });
+}
+function cancelMyBooking(id, phone){
+  if(!confirm('确定取消这条预约吗?')) return;
+  api('/api/bookings/'+id+'/cancel?phone='+encodeURIComponent(phone), {method:'POST'})
+    .then(function(){ toast('已取消'); queryMyBookings(); })
+    .catch(function(e){ toast(e.message); });
+}
+
+/* ---------- 店员: 登录 ---------- */
+function staffLogin(){
+  var pwd = document.getElementById('staffPwd').value;
+  if(!pwd){ toast('请输入密码'); return; }
+  api('/api/staff/login', { method:'POST', body: JSON.stringify({password:pwd}) })
+    .then(function(j){ token=j.token; localStorage.setItem('ys_token', token);
+      document.getElementById('staffPwd').value=''; showStaffMain(); toast('登录成功'); })
+    .catch(function(e){ toast(e.message); });
+}
+function staffTab(name, el){
+  var tabs = el.parentNode.children; for(var i=0;i<tabs.length;i++) tabs[i].className='';
+  el.className='on';
+  ['bookings','order','stats','services'].forEach(function(n){
+    document.getElementById('st'+n.charAt(0).toUpperCase()+n.slice(1)).className = 'page' + (n===name?' on':'');
+  });
+  if(name==='stats') loadStats();
+  if(name==='order'){ loadOrderServices(); loadTodayOrders(); }
+}
+
+/* ---------- 店员: 预约管理 ---------- */
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function loadStaffBookings(){
+  var inp = document.getElementById('bkDate');
+  if(!inp.value) inp.value = todayStr();
+  api('/api/staff/bookings?d='+inp.value).then(function(j){
+    var html = '';
+    if(!j.bookings.length) html = '<div class="card"><div class="empty">'+esc(j.date)+' 暂无预约</div></div>';
+    j.bookings.forEach(function(b){
+      html += '<div class="card"><div class="item"><div class="row1"><span class="t">'+esc(b.time_slot)+' · '+esc(b.service_name)+'</span>'
+        + '<span class="tag '+b.status+'">'+esc(b.status_label)+'</span></div>'
+        + '<div class="sub">'+esc(b.name)+' · '+esc(b.phone)+' · '+money(b.price)+'元 · 单号'+esc(b.booking_no)+'</div>'
+        + '<div class="actions">'
+        + '<button class="btn small ghost" onclick="setBkStatus('+b.id+',\'arrived\')">已到店</button>'
+        + '<button class="btn small" onclick="setBkStatus('+b.id+',\'done\')">已完成</button>'
+        + '<button class="btn small danger" onclick="setBkStatus('+b.id+',\'cancelled\')">取消</button>'
+        + '</div></div></div>';
+    });
+    document.getElementById('staffBookingList').innerHTML = html;
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+function setBkStatus(id, status){
+  api('/api/staff/bookings/'+id+'/status', { method:'POST', body: JSON.stringify({status:status}) })
+    .then(function(){ loadStaffBookings(); })
+    .catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+
+/* ---------- 店员: 快速开单 ---------- */
+var orderPriceMap = {};
+function loadOrderServices(){
+  api('/api/staff/services').then(function(j){
+    orderPriceMap = {};
+    var html = '';
+    j.services.filter(function(s){return s.active===1;}).forEach(function(s){
+      orderPriceMap[s.id] = s.price;
+      var q = orderSel[s.id] || 0;
+      html += '<div class="svc"><div class="info"><div class="name">'+esc(s.name)+'</div></div>'
+        + '<div class="price">'+money(s.price)+'</div>'
+        + '<div class="qty"><button onclick="chQty('+s.id+',-1)">−</button><span id="q'+s.id+'">'+q+'</span><button onclick="chQty('+s.id+',1)">+</button></div></div>';
+    });
+    document.getElementById('orderSvcList').innerHTML = html || '<div class="empty">暂无上架项目</div>';
+    bindPayRow(); updateTotal();
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+function chQty(id, d){
+  orderSel[id] = Math.max(0, Math.min(20, (orderSel[id]||0) + d));
+  var el = document.getElementById('q'+id); if(el) el.textContent = orderSel[id];
+  updateTotal();
+}
+function updateTotal(){
+  var total = 0;
+  for(var id in orderSel){ if(orderSel[id]>0 && orderPriceMap[id]) total += orderPriceMap[id]*orderSel[id]; }
+  document.getElementById('orderTotal').textContent = money(total);
+  return total;
+}
+function bindPayRow(){
+  var chips = document.getElementById('payRow').children;
+  for(var i=0;i<chips.length;i++){
+    chips[i].onclick = (function(el){ return function(){
+      for(var k=0;k<chips.length;k++) chips[k].className='chip';
+      el.className='chip on'; payMethod = el.getAttribute('data-pay');
+    };})(chips[i]);
+  }
+}
+function submitOrder(){
+  var items = [];
+  for(var id in orderSel){ if(orderSel[id]>0) items.push({service_id:parseInt(id), qty:orderSel[id]}); }
+  if(!items.length){ toast('请先选择项目'); return; }
+  var phone = document.getElementById('odPhone').value.trim();
+  if(phone && !/^1[3-9]\d{9}$/.test(phone)){ toast('顾客手机号格式不正确'); return; }
+  api('/api/staff/orders', { method:'POST', body: JSON.stringify({
+      items: items, payment_method: payMethod,
+      customer_name: document.getElementById('odName').value.trim(),
+      customer_phone: phone, remark: document.getElementById('odRemark').value.trim()
+    }) }).then(function(j){
+    toast('收款成功 '+money(j.total)+' ('+j.payment_method+')');
+    orderSel = {};
+    document.getElementById('odName').value=''; document.getElementById('odPhone').value=''; document.getElementById('odRemark').value='';
+    loadOrderServices(); loadTodayOrders();
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+function loadTodayOrders(){
+  api('/api/staff/orders?d='+todayStr()).then(function(j){
+    var html = '';
+    if(!j.orders.length) html = '<div class="empty">今日暂无订单</div>';
+    j.orders.forEach(function(o){
+      var names = o.items.map(function(it){ return esc(it.name)+'×'+it.qty; }).join('、');
+      html += '<div class="item"><div class="row1"><span class="t">'+money(o.total)+' · '+esc(o.payment_method)+'</span>'
+        + '<span class="sub">'+esc(o.created_at.slice(11,16))+'</span></div>'
+        + '<div class="sub">'+names+(o.customer_name?' · '+esc(o.customer_name):'')+'</div></div>';
+    });
+    document.getElementById('todayOrders').innerHTML = html;
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+
+/* ---------- 店员: 营收统计 ---------- */
+function loadStats(){
+  api('/api/staff/stats').then(function(j){
+    document.getElementById('stTodayRev').textContent = money(j.today.revenue);
+    document.getElementById('stWeekRev').textContent = money(j.week.revenue);
+    document.getElementById('stMonthRev').textContent = money(j.month.revenue);
+    document.getElementById('stTodayN').textContent = j.today.orders;
+    document.getElementById('stWeekN').textContent = j.week.orders;
+    document.getElementById('stMonthN').textContent = j.month.orders;
+    var html = '';
+    if(!j.ranking.length) html = '<div class="empty">本月暂无销售</div>';
+    j.ranking.forEach(function(r, i){
+      html += '<div class="rank"><span>'+(i+1)+'. '+esc(r.name)+'</span><span>'+r.qty+' 单 · '+money(r.revenue)+'</span></div>';
+    });
+    document.getElementById('rankList').innerHTML = html;
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+
+/* ---------- 店员: 项目管理 ---------- */
+function loadStaffServices(){
+  api('/api/staff/services').then(function(j){
+    var html = '';
+    j.services.forEach(function(s){
+      html += '<div class="card"><div class="item"><div class="row1"><span class="t">'+esc(s.name)+'</span>'
+        + '<span class="tag '+(s.active?'done':'cancelled')+'">'+(s.active?'上架':'下架')+'</span></div>'
+        + '<div class="sub">'+esc(s.category)+' · '+money(s.price)+'元'+(s.description?' · '+esc(s.description):'')+'</div>'
+        + '<div class="actions"><button class="btn small ghost" onclick=\'openSvcEdit('+JSON.stringify(s).replace(/'/g,"&#39;")+')\'>编辑</button>'
+        + '<button class="btn small '+(s.active?'danger':'')+'" onclick="toggleSvc('+s.id+','+(s.active?0:1)+')">'
+        + (s.active?'下架':'上架')+'</button></div></div></div>';
+    });
+    document.getElementById('staffSvcList').innerHTML = html || '<div class="empty">暂无项目</div>';
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+function openSvcEdit(s){
+  document.getElementById('svcEditTitle').textContent = s ? '编辑项目' : '新增项目';
+  document.getElementById('seId').value = s ? s.id : '';
+  document.getElementById('seName').value = s ? s.name : '';
+  document.getElementById('sePrice').value = s ? s.price : '';
+  document.getElementById('seCat').value = s ? s.category : '';
+  document.getElementById('seDesc').value = s ? (s.description||'') : '';
+  document.getElementById('seSort').value = s ? s.sort_order : 99;
+  document.getElementById('seActive').value = s ? String(s.active) : '1';
+  document.getElementById('svcMask').classList.add('show');
+}
+function toggleSvc(id, active){
+  api('/api/staff/services/'+id, { method:'PUT', body: JSON.stringify({active:active}) })
+    .then(function(){ loadStaffServices(); })
+    .catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+function saveService(){
+  var id = document.getElementById('seId').value;
+  var body = {
+    name: document.getElementById('seName').value.trim(),
+    price: parseFloat(document.getElementById('sePrice').value),
+    category: document.getElementById('seCat').value.trim() || '身体调理',
+    description: document.getElementById('seDesc').value.trim(),
+    sort_order: parseInt(document.getElementById('seSort').value) || 99,
+    active: parseInt(document.getElementById('seActive').value)
+  };
+  if(!body.name){ toast('请填写项目名称'); return; }
+  if(!(body.price > 0)){ toast('价格无效'); return; }
+  var url = id ? '/api/staff/services/'+id : '/api/staff/services';
+  var method = id ? 'PUT' : 'POST';
+  api(url, { method:method, body: JSON.stringify(body) }).then(function(){
+    closeModal('svcMask'); toast('已保存'); loadStaffServices(); loadServices();
+  }).catch(function(e){ if(e.message!=='unauth') toast(e.message); });
+}
+
+/* ---------- 初始化 ---------- */
+loadServices();
+loadMeta();
+</script>
+</body>
+</html>
